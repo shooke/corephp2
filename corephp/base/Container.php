@@ -8,6 +8,8 @@
 
 namespace corephp\base;
 
+use \Exception;
+
 /**
  * 容器
  * 先set所有的依赖和要初始化的类，然后调用get取出
@@ -98,7 +100,7 @@ class Container
 
         // 检查类是否可实例化, 排除抽象类abstract和对象接口interface
         if (!$reflector->isInstantiable()) {
-            throw new Exception("Can't instantiate this.");
+            throw new Exception($this->_buildingClass."无法实例化");
         }
 
         /**
