@@ -61,6 +61,7 @@ class Autoload
             $file = $dir . DIRECTORY_SEPARATOR . $className . '.php';
             $file = str_replace(['//','\\\\','\\','/'], DIRECTORY_SEPARATOR, $file);//防止出现dir//dir或dir\\dir格式
             if (file_exists($file)) {
+                /* @noinspection PhpIncludeInspection */
                 require $file;
                 return true;
             }
