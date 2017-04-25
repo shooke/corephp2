@@ -8,21 +8,73 @@
 
 namespace corephp\base;
 
-
+/**
+ * 容器
+ * 先set所有的依赖和要初始化的类，然后调用get取出
+ * try{
+ * $container = new Container;
+ *     $container->set('a');
+ *     var_dump($container->get('a'));
+ *      $container->set('namespace\a',['param1'],'ns\a');
+ * }catch(Exception $e){
+ *     echo $e->getMessage();
+ * }
+ * @package corephp\base
+ */
 class Container
 {
-    private $container = array();
+    // 用于保存已生成的实例
+    private $_objects = [];
 
-    public function __set($key, $value)
+    // 用于保存依赖的定义，以对象类型为键
+    private $_classes = [];
+
+    // 用于保存构造函数的参数，以对象类型为键
+    private $_params = [];
+
+    private $_dependencies = [];
+
+    // 要实例化的类名
+    private $_buildingClass;
+
+    /**
+     * 设置依赖关系
+     * class为要实例化的类
+     * params为构造函数所需参数
+     * dependencies为构造函数中参数的限定类型
+     * 如构造函数所需类型db::__construct(ns\db $db)
+     * $container->set('ns\myssql',['param1'],'ns\db');
+     * $container->set('db',[
+     * 'dsn'=>'',
+     * ]);
+     * $container->get('db');
+     * 程序会去实例化ns\mysql作为参数传入
+     * @param $class
+     * @param array $params
+     * @param string $dependencies
+     * @return $this
+     */
+    public function set($class, array $params = [],$dependencies='')
     {
-        $this->container[$key] = $value;
+        $this->_classes[$class] = $class;
+        $this->_params[$class] = $params;
+        if($dependencies){
+            $this->_dependencies[$dependencies] = $class;
+        }
+        unset($this->_objects[$class]);
+        return $this;
     }
 
-    public function __get($key)
+    public function get($class)
     {
-        // return $this->container[$key]($this);
-        return $this->build($this->container[$key]);
+        if (isset($this->_objects[$class])) {
+            return $this->_objects[$class];
+        } else {
+            $this->_objects[$class] = $this->build($class);
+            return $this->_objects[$class];
+        }
     }
+
 
     /**
      * 自动绑定（Autowiring）自动解析（Automatic Resolution）
@@ -38,7 +90,7 @@ class Container
             // 执行闭包函数，并将结果
             return $className($this);
         }
-
+        $this->_buildingClass = $className;
         /**
          * @var ReflectionClass $reflector
          */
@@ -60,11 +112,17 @@ class Container
             return new $className;
         }
 
-        // 取构造函数参数,通过 ReflectionParameter 数组返回参数列表
+        /**
+         * 取构造函数参数,通过 ReflectionParameter 数组返回参数列表
+         * @var ReflectionParameter $parameters
+         */
         $parameters = $constructor->getParameters();
 
-        // 递归解析构造函数的参数
-        $dependencies = $this->getDependencies($parameters);
+        /**
+         * 解析构造函数的参数
+         * 如果传入了参数则直接使用用户传入的参数，如果没有设置，则自动解析
+         */
+        $dependencies = $this->_params[$className] ? $this->_params[$className] : $this->getDependencies($parameters);
 
         // 创建一个类的新实例，给出的参数将传递到类的构造函数。
         return $reflector->newInstanceArgs($dependencies);
@@ -92,8 +150,9 @@ class Container
                 // 是变量,有默认值则设置默认值
                 $dependencies[] = $this->resolveNonClass($parameter);
             } else {
-                // 是一个类，递归解析
-                $dependencies[] = $this->build($dependency->name);
+                // 声明过对应依赖则调用对应依赖，未声明则直接根据类型创建
+                $dependenciesClass = isset($this->_dependencies[$dependency->name]) ? $this->_dependencies[$dependency->name] : $dependency->name;
+                $dependencies[] = $this->build($dependenciesClass);
             }
         }
 
@@ -111,7 +170,6 @@ class Container
         if ($parameter->isDefaultValueAvailable()) {
             return $parameter->getDefaultValue();
         }
-
-        throw new Exception('I have no idea what to do here.');
+        throw new Exception($this->_buildingClass . "::__construct() 缺少参数");
     }
 }
