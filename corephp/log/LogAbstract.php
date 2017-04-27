@@ -24,28 +24,40 @@ abstract class LogAbstract
      * @param $message
      * @param $file
      */
-    abstract public function info($file, $message);
+    public function info($file, $message)
+    {
+        $this->save($file,$message,self::INFO);
+    }
 
     /**
      * 比 info 还需要被注意到的一些信息内容
      * @param $message
      * @param $file
      */
-    abstract public function notice($file, $message);
+    public function notice($file, $message)
+    {
+        $this->save($file,$message,self::NOTICE);
+    }
 
     /**
      * 警示讯息，可能有问题，但是还不至于影响到某个 daemon 运作
      * @param $message
      * @param $file
      */
-    abstract public function warning($file, $message);
+    public function warning($file, $message)
+    {
+        $this->save($file,$message,self::WARNING);
+    }
 
     /**
      * 一些重大的错误讯息，这就要去找原因了
      * @param $file
      * @param $message
      */
-    abstract public function error($file, $message);
+    public function error($file, $message)
+    {
+        $this->save($file,$message,self::ERROR);
+    }
 
     /**
      * 比 error 还要严重的错误信息，crit 是临界点 (critical) 的缩写，已经很严重了！
@@ -54,6 +66,7 @@ abstract class LogAbstract
      */
     public function critical($file, $message)
     {
+        $this->save($file,$message,self::CRITICAL);
     }
 
     /**
@@ -63,6 +76,7 @@ abstract class LogAbstract
      */
     public function alert($file, $message)
     {
+        $this->save($file,$message,self::ALERT);
     }
 
     /**
@@ -72,6 +86,7 @@ abstract class LogAbstract
      */
     public function emergency($file, $message)
     {
+        $this->save($file,$message,self::EMERGENCY);
     }
 
     /**
@@ -81,5 +96,14 @@ abstract class LogAbstract
      */
     public function debug($file, $message)
     {
+        $this->save($file,$message,self::DEBUG);
     }
+
+    /**
+     * 保存日志
+     * @param $file
+     * @param $message
+     * @param $level
+     */
+    abstract protected function save($file, $message,$level);
 }
