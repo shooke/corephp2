@@ -32,9 +32,17 @@ class Route
 
     /**
      * 路由规则
+     * [
+     * ['route'=>'view/(.*)','run'=>'class/action','method'=>'get|post']
+     * ]
      * @var array
      */
     public $rules;
+    /**
+     * 是否隐藏执行文件
+     * @var bool
+     */
+    public $hiddenScriptFile = true;
     /**
      * 路由形式
      * pathinfo 或 param
@@ -125,16 +133,38 @@ class Route
             'arguments'=>$paramArray
         ];
     }
+
+
     /**
-     * Runs the callback for the given request
+     * 执行中间件和控制器
+     * @param $call
+     * @return mixed
      */
-    public function dispatch()
+    private function _execute($call)
+    {
+        $className = preg_replace('/\\+|\/+/', '\\', $this->controllerNamespace.'/'.dirname($call['route']));
+        $controllerObject = new $className;
+        $action = basename($call['route']);
+        //执行中间件前置操作
+        $this->middleware->before();
+        //执行控制器方法
+        $result = call_user_func_array([$controllerObject,$action],$call['arguments']);
+        //执行中间件后置操作
+        $this->middleware->after();
+
+        return $result;
+    }
+
+    /**
+     * 执行运行
+     */
+    public function run()
     {
         //根据规则操作路由
         if($this->rules){
             $call = $this->_parseRule();
             if($call['route']){
-                return $this->run($call);
+                return $this->_execute($call);
             }
         }
 
@@ -152,29 +182,58 @@ class Route
             $call['route'] = $this->defaultRun;
         }
 
-        return $this->run($call);
+        return $this->_execute($call);
 
 
     }
 
     /**
-     * 执行中间件和控制器
-     * @param $call
-     * @return mixed
+     * 生成url
+     * @param $ctrlAction
+     * @param array $param
+     * @param string $anchor
+     * @return string
      */
-    public function run($call)
+    public function createUrl($ctrlAction,$param=[],$anchor='')
     {
-        $className = preg_replace('/\\+|\/+/', '\\', $this->controllerNamespace.'/'.dirname($call['route']));
-        $controllerObject = new $className;
-        $action = basename($call['route']);
-        //执行中间件前置操作
-        $this->middleware->before();
-        //执行控制器方法
-        $result = call_user_func_array([$controllerObject,$action],$call['arguments']);
-        //执行中间件后置操作
-        $this->middleware->after();
+        $scriptName = $_SERVER['SCRIPT_NAME'];
+        $route = '';
+        $url = '';
+        if($this->rules){
+            foreach ($this->rules as $rule){
+                if($rule['run']=$ctrlAction){
+                    $route = $rule['route'];
+                    break;
+                }
+            }
+            if($route){
 
-        return $result;
+            }
+        }
+        if($route==''){
+            $route = $ctrlAction;
+            //解析规则外的规则
+            switch (strtoupper($this->routeType)){
+                case self::ROUTE_TYPE_PATHINFO:
+                    $url .= $this->hiddenScriptFile ? dirname($scriptName).'/'.$route : $scriptName.'/'.$route;
+                    $url .= '?'.http_build_query($param);
+                    break;
+                case self::ROUTE_TYPE_PARAM:
+                    $urlParam = [$this->routeParamName=>$route];
+                    if($param){
+                        foreach ($param as $key=>$value){
+                            $urlParam[$key] = $value;
+                        }
+                    }
+                    $url .= $this->hiddenScriptFile
+                        ? dirname($scriptName).'?'.http_build_query($urlParam)
+                        : $scriptName.'?'.http_build_query($urlParam);
+
+            }
+        }
+        $url .= $anchor ? '#'.$anchor : '';
+        return $url;
+
     }
 
 }
