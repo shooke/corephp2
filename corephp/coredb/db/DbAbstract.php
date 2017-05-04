@@ -27,6 +27,7 @@ abstract class DbAbstract
      * @var array
      */
     protected $logs;
+
     /**
      * 执行一段事务
      * $obj->transaction(function($obj){
@@ -90,6 +91,19 @@ abstract class DbAbstract
     }
 
 
+    /**
+     * 执行查询
+     * @param $sql
+     * @param $params
+     * @return bool
+     */
+    private function _prepareExecute($sql, $params)
+    {
+        $this->saveLogs($sql, $params);
+
+        $this->statement = $this->pdo()->prepare($sql);
+        return $this->statement->execute($params);
+    }
 
     /**
      * 执行插入
@@ -97,70 +111,69 @@ abstract class DbAbstract
      * @param array $params
      * @return bool
      */
-    public function insert($sql,$params=[])
+    public function insert($sql, $params = [])
     {
-        $this->saveLogs($sql,$params);
-
-        $this->statement = $this->pdo()->prepare($sql);
-        return $this->statement->execute($params);
+        return $this->_prepareExecute($sql,$params);
     }
+
     /**
      * 执行替换式插入
      * @param $sql
      * @param array $params
      * @return bool
      */
-    public function replace($sql,$params=[])
+    public function replace($sql, $params = [])
     {
-        $this->statement = $this->pdo()->prepare($sql);
-        return $this->statement->execute($params);
+        return $this->_prepareExecute($sql,$params);
     }
+
     /**
      * 执行更新
      * @param $sql
      * @param array $params
      * @return bool
      */
-    public function update($sql,$params=[])
+    public function update($sql, $params = [])
     {
-        $this->statement = $this->pdo()->prepare($sql);
-        return $this->statement->execute($params);
+        return $this->_prepareExecute($sql,$params);
     }
+
     /**
      * 执行删除
      * @param $sql
      * @param array $params
      * @return bool
      */
-    public function delete($sql,$params=[])
+    public function delete($sql, $params = [])
     {
-        $this->statement = $this->pdo()->prepare($sql);
-        return $this->statement->execute($params);
+        return $this->_prepareExecute($sql,$params);
     }
+
     /**
      * 执行查询
      * @param $sql
      * @param array $params
      * @return array
      */
-    public function select($sql,$params=[])
+    public function select($sql, $params = [])
     {
-        $this->statement = $this->pdo()->prepare($sql);
-        $this->statement->execute($params);
+        $this->_prepareExecute($sql,$params);
         return $this->statement->fetchAll(PDO::FETCH_ASSOC);
     }
+
     /**
      * 记录sql执行
      * @param $sql
      * @param $params
      */
-    protected function saveLogs($sql,$params)
+    protected function saveLogs($sql, $params)
     {
         $this->logs[] = [
-            'sql'=>$sql,
-            'params'=>$params,
+            'sql'    => $sql,
+            'params' => $params,
         ];
     }
+
     /**
      * 根据数据库配置创建或返回连接
      * @return PDO|null
@@ -173,7 +186,7 @@ abstract class DbAbstract
      * @param null $name
      * @return mixed
      */
-    abstract public function lastInsertId($name=null);
+    abstract public function lastInsertId($name = null);
 
     /**
      * 返回受上一个 SQL 语句影响的行数
