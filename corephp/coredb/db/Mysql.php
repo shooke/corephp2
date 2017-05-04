@@ -31,26 +31,8 @@ class Mysql extends DbAbstract
      * @var null|PDO
      */
     protected $pdo = null;
-    /**
-     * @var array
-     */
-    protected $logs = [];
 
-    protected $lastInsertId;
-    protected $rowCount;
 
-    /**
-     * 记录sql执行
-     * @param $sql
-     * @param $params
-     */
-    private function saveLogs($sql,$params)
-    {
-        $this->logs[] = [
-            'sql'=>$sql,
-            'params'=>$params,
-        ];
-    }
     /**
      * 根据数据库配置创建或返回连接
      * @return PDO|null
@@ -85,100 +67,16 @@ class Mysql extends DbAbstract
         }
     }
 
-    /**
-     * 执行插入
-     * @param $sql
-     * @param array $params
-     * @return bool
-     */
-    public function insert($sql, $params = [])
-    {
-        $this->saveLogs($sql,$params);
 
-        $this->rowCount = 0;
-        $this->lastInsertId = 0;
-
-        $statement = $this->pdo()->prepare($sql);
-        $result = $statement->execute($params);
-        $this->rowCount = $statement->rowCount();
-        $this->lastInsertId = $this->pdo()->lastInsertId();
-        return $result;
-    }
-
-    /**
-     * 执行替换式插入
-     * @param $sql
-     * @param array $params
-     * @return bool
-     */
-    public function replace($sql, $params = [])
-    {
-        $this->saveLogs($sql,$params);
-
-        $statement = $this->pdo()->prepare($sql);
-        $result = $statement->execute($params);
-        $this->rowCount = $statement->rowCount();
-        $this->lastInsertId = $this->pdo()->lastInsertId();
-        return $result;
-    }
-
-    /**
-     * 执行更新
-     * @param $sql
-     * @param array $params
-     * @return bool
-     */
-    public function update($sql, $params = [])
-    {
-        $this->saveLogs($sql,$params);
-
-        $statement = $this->pdo()->prepare($sql);
-        $result = $statement->execute($params);
-        $this->rowCount = $statement->rowCount();
-        $this->lastInsertId = 0;
-        return $result;
-    }
-
-    /**
-     * 执行删除
-     * @param $sql
-     * @param array $params
-     * @return bool
-     */
-    public function delete($sql, $params = [])
-    {
-        $this->saveLogs($sql,$params);
-
-        $statement = $this->pdo()->prepare($sql);
-        $result = $statement->execute($params);
-        $this->rowCount = $statement->rowCount();
-        $this->lastInsertId = 0;
-        return $result;
-    }
-
-    /**
-     * 执行查询
-     * @param $sql
-     * @param array $params
-     * @return array
-     */
-    public function select($sql, $params = [])
-    {
-        $this->saveLogs($sql,$params);
-
-        $statement = $this->pdo()->prepare($sql);
-        $statement->execute($params);
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
-    }
 
     /**
      * 返回最后插入行的ID或序列值
-     * @param string $name
+     * @param string|null $name
      * @return mixed
      */
-    public function lastInsertId($name = '')
+    public function lastInsertId($name = null)
     {
-        return $this->lastInsertId;
+        return $this->pdo()->lastInsertId($name);
     }
 
     /**
@@ -187,7 +85,7 @@ class Mysql extends DbAbstract
      */
     public function rowCount()
     {
-        return $this->rowCount;
+        return $this->statement->rowCount();
     }
 
     /**
